@@ -72,7 +72,7 @@ use frame_support::weights::{Weight, PostDispatchInfo};
 use frame_support::traits::{Currency, ExistenceRequirement, WithdrawReasons, Imbalance, OnUnbalanced};
 use frame_system::RawOrigin;
 use sp_core::{U256, H256, H160, Hasher};
-use sp_runtime::{AccountId32, traits::{UniqueSaturatedInto, BadOrigin, Saturating}};
+use sp_runtime::{AccountId32, traits::{UniqueSaturatedInto, BadOrigin}};
 use evm::Config as EvmConfig;
 
 pub use pallet::*;
@@ -654,29 +654,11 @@ where
 	}
 
 	fn correct_and_deposit_fee(
-		who: &H160,
-		corrected_fee: U256,
-		already_withdrawn: Self::LiquidityInfo,
+		_who: &H160,
+		_corrected_fee: U256,
+		_already_withdrawn: Self::LiquidityInfo,
 	) -> Result<(), Error<T>> {
-		if let Some(paid) = already_withdrawn {
-			let account_id = T::AddressMapping::into_account_id(*who);
-
-			// Calculate how much refund we should return
-			let refund_amount = paid
-				.peek()
-				.saturating_sub(corrected_fee.low_u128().unique_saturated_into());
-			// refund to the account that paid the fees. If this fails, the
-			// account might have dropped below the existential balance. In
-			// that case we don't refund anything.
-			let refund_imbalance = C::deposit_into_existing(&account_id, refund_amount)
-				.unwrap_or_else(|_| C::PositiveImbalance::zero());
-			// merge the imbalance caused by paying the fees and refunding parts of it again.
-			let adjusted_paid = paid
-				.offset(refund_imbalance)
-				.map_err(|_| Error::<T>::BalanceLow)?;
-			OU::on_unbalanced(adjusted_paid);
-		}
-		Ok(())
+		unimplemented!()
 	}
 }
 
