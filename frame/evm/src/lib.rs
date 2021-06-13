@@ -88,6 +88,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
+	#[pallet::disable_frame_system_supertrait_check]
 	pub trait Config: frame_system::Config + pallet_timestamp::Config {
 		/// Calculator for current gas price.
 		type FeeCalculator: FeeCalculator;
