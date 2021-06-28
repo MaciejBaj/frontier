@@ -18,92 +18,92 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Encode, Decode};
-use sp_std::{result, cmp::{min, max}};
-use sp_runtime::RuntimeDebug;
+use codec::{Decode, Encode};
+use frame_support::inherent::{InherentData, InherentIdentifier, IsFatalError, ProvideInherent};
 use sp_core::U256;
-use frame_support::inherent::{InherentData, ProvideInherent, InherentIdentifier, IsFatalError};
+use sp_runtime::RuntimeDebug;
+use sp_std::{
+    cmp::{max, min},
+    result,
+};
 // #[cfg(feature = "std")]
 // use frame_support::inherent::ProvideInherentData;
-use frame_support::{
-	decl_module, decl_storage, decl_event,
-	traits::Get, weights::Weight,
-};
+use frame_support::{decl_module, decl_storage, traits::Get, weights::Weight};
 use frame_system::ensure_none;
 
 pub trait Config: frame_system::Config {
-	/// Bound divisor for min gas price.
-	type MinGasPriceBoundDivisor: Get<U256>;
+    /// Bound divisor for min gas price.
+    type MinGasPriceBoundDivisor: Get<U256>;
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as DynamicFee {
-		MinGasPrice get(fn min_gas_price) config(): U256;
-		TargetMinGasPrice: Option<U256>;
-	}
-	add_extra_genesis {
-		build(|_config: &GenesisConfig| {
-			MinGasPrice::set(U256::from(1));
-		});
-	}
+    trait Store for Module<T: Config> as DynamicFee {
+        MinGasPrice get(fn min_gas_price) config(): U256;
+        TargetMinGasPrice: Option<U256>;
+    }
+    add_extra_genesis {
+        build(|_config: &GenesisConfig| {
+            MinGasPrice::set(U256::from(1));
+        });
+    }
 }
 
 decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
-		fn on_initialize(_block_number: T::BlockNumber) -> Weight {
-			TargetMinGasPrice::kill();
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
+        fn on_initialize(_block_number: T::BlockNumber) -> Weight {
+            TargetMinGasPrice::kill();
 
-			T::DbWeight::get().writes(1)
-		}
+            T::DbWeight::get().writes(1)
+        }
 
-		fn on_finalize(n: T::BlockNumber) {
-			if let Some(target) = TargetMinGasPrice::get() {
-				let bound = MinGasPrice::get() / T::MinGasPriceBoundDivisor::get() + U256::one();
+        fn on_finalize(_n: T::BlockNumber) {
+            if let Some(target) = TargetMinGasPrice::get() {
+                let bound = MinGasPrice::get() / T::MinGasPriceBoundDivisor::get() + U256::one();
 
-				let upper_limit = MinGasPrice::get().saturating_add(bound);
-				let lower_limit = MinGasPrice::get().saturating_sub(bound);
+                let upper_limit = MinGasPrice::get().saturating_add(bound);
+                let lower_limit = MinGasPrice::get().saturating_sub(bound);
 
-				MinGasPrice::set(min(upper_limit, max(lower_limit, target)));
-			}
-		}
+                MinGasPrice::set(min(upper_limit, max(lower_limit, target)));
+            }
+        }
 
-		#[weight = T::DbWeight::get().writes(1)]
-		fn note_min_gas_price_target(
-			origin,
-			target: U256,
-		) {
-			ensure_none(origin)?;
+        #[weight = T::DbWeight::get().writes(1)]
+        fn note_min_gas_price_target(
+            origin,
+            target: U256,
+        ) {
+            ensure_none(origin)?;
 
-			TargetMinGasPrice::set(Some(target));
-		}
-	}
+            TargetMinGasPrice::set(Some(target));
+        }
+    }
 }
 
 impl<T: Config> pallet_evm::FeeCalculator for Module<T> {
-	fn min_gas_price() -> U256 {
-		MinGasPrice::get()
-	}
+    fn min_gas_price() -> U256 {
+        MinGasPrice::get()
+    }
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
-pub enum InherentError { }
+pub enum InherentError {}
 
 impl IsFatalError for InherentError {
-	fn is_fatal_error(&self) -> bool {
-		match *self { }
-	}
+    fn is_fatal_error(&self) -> bool {
+        match *self {}
+    }
 }
 
 impl InherentError {
-	/// Try to create an instance ouf of the given identifier and data.
-	#[cfg(feature = "std")]
-	pub fn try_from(id: &InherentIdentifier, data: &[u8]) -> Option<Self> {
-		if id == &INHERENT_IDENTIFIER {
-			<InherentError as codec::Decode>::decode(&mut &data[..]).ok()
-		} else {
-			None
-		}
-	}
+    /// Try to create an instance ouf of the given identifier and data.
+    #[cfg(feature = "std")]
+    pub fn try_from(id: &InherentIdentifier, data: &[u8]) -> Option<Self> {
+        if id == &INHERENT_IDENTIFIER {
+            <InherentError as codec::Decode>::decode(&mut &data[..]).ok()
+        } else {
+            None
+        }
+    }
 }
 
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"dynfee0_";
@@ -132,21 +132,21 @@ pub type InherentType = U256;
 // }
 
 impl<T: Config> ProvideInherent for Module<T> {
-	type Call = Call<T>;
-	type Error = InherentError;
-	const INHERENT_IDENTIFIER: InherentIdentifier = INHERENT_IDENTIFIER;
+    type Call = Call<T>;
+    type Error = InherentError;
+    const INHERENT_IDENTIFIER: InherentIdentifier = INHERENT_IDENTIFIER;
 
-	fn create_inherent(data: &InherentData) -> Option<Self::Call> {
-		let target = data.get_data::<InherentType>(&INHERENT_IDENTIFIER).ok()??;
+    fn create_inherent(data: &InherentData) -> Option<Self::Call> {
+        let target = data.get_data::<InherentType>(&INHERENT_IDENTIFIER).ok()??;
 
-		Some(Call::note_min_gas_price_target(target))
-	}
+        Some(Call::note_min_gas_price_target(target))
+    }
 
-	fn check_inherent(_call: &Self::Call, _data: &InherentData) -> result::Result<(), Self::Error> {
-		Ok(())
-	}
+    fn check_inherent(_call: &Self::Call, _data: &InherentData) -> result::Result<(), Self::Error> {
+        Ok(())
+    }
 
-	fn is_inherent(call: &Self::Call) -> bool {
-		matches!(call, Call::note_min_gas_price_target(_))
-	}
+    fn is_inherent(call: &Self::Call) -> bool {
+        matches!(call, Call::note_min_gas_price_target(_))
+    }
 }
