@@ -20,7 +20,7 @@
 use crate::runner::Runner as RunnerT;
 use crate::{
     AccountCodes, AccountStorages, AddressMapping, BlockHashMapping, Config, Error, Event,
-    FeeCalculator, Pallet, OnChargeEVMTransaction, PrecompileSet,
+    FeeCalculator, OnChargeEVMTransaction, Pallet, PrecompileSet,
 };
 use evm::backend::Backend as BackendT;
 use evm::executor::{StackExecutor, StackState as StackStateT, StackSubstateMetadata};
@@ -28,7 +28,6 @@ use evm::{ExitError, ExitReason, Transfer};
 use fp_evm::{CallInfo, CreateInfo, ExecutionInfo, Log, Vicinity};
 use frame_support::{
     ensure,
-    storage::{StorageDoubleMap, StorageMap},
     traits::{Currency, ExistenceRequirement, Get},
 };
 use sha3::{Digest, Keccak256};
