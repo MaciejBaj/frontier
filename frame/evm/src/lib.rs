@@ -576,7 +576,9 @@ impl<T: Config> Pallet<T> {
         }
 
         <AccountCodes<T>>::remove(address);
-        <AccountStorages<T>>::remove_prefix(address, None);
+        //ToDo: Uncomment when upgrading to v4.0.0 substrate
+        // <AccountStorages<T>>::remove_prefix(address, None);
+        <AccountStorages<T>>::remove_prefix(address);
     }
 
     /// Create an account.

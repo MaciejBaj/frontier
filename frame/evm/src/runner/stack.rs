@@ -473,7 +473,9 @@ impl<'vicinity, 'config, T: Config> StackStateT<'config>
     }
 
     fn reset_storage(&mut self, address: H160) {
-        <AccountStorages<T>>::remove_prefix(address, None);
+        //ToDo: Uncomment when upgrading to v4.0.0 substrate
+        // <AccountStorages<T>>::remove_prefix(address, None);
+        <AccountStorages<T>>::remove_prefix(address);
     }
 
     fn log(&mut self, address: H160, topics: Vec<H256>, data: Vec<u8>) {
